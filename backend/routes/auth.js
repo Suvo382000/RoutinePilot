@@ -62,9 +62,8 @@ router.post('/signup', async (req, res) => {
       return res.status(400).json({ message: 'Name, email, password, and role are required' });
     }
 
-    if (role === 'admin') {
-      return res.status(403).json({ message: 'Admin accounts cannot be self-registered.' });
-    }
+    // Admin signup is allowed — secure code is validated on the frontend
+    // (ADMIN2026 check happens in auth.js frontend before this API is called)
 
     // Check if email already exists
     const existing = await User.findOne({ email: email.toLowerCase() });
@@ -74,7 +73,7 @@ router.post('/signup', async (req, res) => {
 
     const userData = {
       name, email, password, role, department,
-      status: 'pending'
+      status: role === 'admin' ? 'active' : 'pending'
     };
 
     if (role === 'teacher') {

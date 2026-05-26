@@ -583,11 +583,23 @@ function handleSignup(e) {
 
     // Try API first, fall back to localStorage
     const trySignup = async () => {
+      let apiSucceeded = false;
+
       try {
         await AuthAPI.signup(userData);
+        apiSucceeded = true;
       } catch (e) {
         // API failed — save to localStorage as fallback
-        DB.addUser(userData);
+        // But do NOT save if API returned a clear error (like "email exists")
+        if (!e.status || e.status >= 500) {
+          DB.addUser(userData);
+        } else {
+          // API returned 400/403 — show error and stop
+          btn.disabled = false;
+          btnText.textContent = 'Create Account';
+          showSuError(e.message || 'Signup failed. Please try again.');
+          return;
+        }
       }
 
       // Always add notification to localStorage so admin sees it on dashboard
@@ -966,18 +978,12 @@ function handleLogin(e) {
       }
       btnText.textContent  = '✓ Success!';
       btn.style.background = 'linear-gradient(135deg,#10b981,#059669)';
-      // Sync all data from MongoDB into localStorage before redirecting
-      DataSync.syncAll().finally(() => {
-        setTimeout(() => { window.location.href = 'dashboard.html'; }, 600);
-      });
+      setTimeout(() => { window.location.href = 'dashboard.html'; }, 600);
     } catch (apiErr) {
       // Only fall back to localStorage if it's a network error (API down)
       // Don't fall back for auth errors (wrong password, pending account)
-      const isNetworkError = apiErr.message && (
-        apiErr.message.includes('Failed to fetch') ||
-        apiErr.message.includes('NetworkError') ||
-        apiErr.message.includes('fetch')
-      );
+      const isNetworkError = !apiErr.status || apiErr.status >= 500 ||
+        (apiErr.message && apiErr.message === 'Failed to fetch');
 
       if (isNetworkError) {
         // API is down — try localStorage

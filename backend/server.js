@@ -42,10 +42,14 @@ app.get('/api/health', (req, res) => {
 });
 
 // ── Serve Frontend Static Files ──
-// In production, serve the frontend from ../frontend
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
-// Any route that doesn't match /api/* serves the frontend
+// 404 handler for unknown API routes — return JSON not HTML
+app.use('/api/*', (req, res) => {
+  res.status(404).json({ message: `API route not found: ${req.method} ${req.originalUrl}` });
+});
+
+// Any non-API route serves the frontend SPA
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
 });
