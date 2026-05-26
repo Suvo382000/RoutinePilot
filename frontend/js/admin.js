@@ -1079,8 +1079,40 @@ const Admin = {
   },
 
   renderApprovals() {
-    const pending  = DB.getUsers().filter(u => u.status === 'pending');
-    const approved = DB.getUsers().filter(u => u.status === 'approved' && u.role !== 'admin');
+    // Show loading state first, then fetch from API
+    const body = document.getElementById('admin-page-body');
+
+    // Render with localStorage data immediately
+    const localPending  = DB.getUsers().filter(u => u.status === 'pending');
+    const localApproved = DB.getUsers().filter(u => u.status === 'approved' && u.role !== 'admin');
+
+    // Also fetch from API to get users who signed up via backend
+    UsersAPI.getPending().then(apiPending => {
+      // Merge API pending users into localStorage
+      apiPending.forEach(apiUser => {
+        const exists = DB.getUsers().find(u =>
+          u.email === apiUser.email || u.id === apiUser._id
+        );
+        if (!exists) {
+          // Add API user to localStorage with mapped id
+          DB.addUser({
+            ...apiUser,
+            id: apiUser._id || apiUser.id,
+            status: 'pending'
+          });
+        }
+      });
+      // Re-render with merged data
+      const merged = DB.getUsers().filter(u => u.status === 'pending');
+      const mergedApproved = DB.getUsers().filter(u => u.status === 'approved' && u.role !== 'admin');
+      document.getElementById('approvals-list').innerHTML = this.renderApprovalsList(merged);
+      // Update tab counts
+      const tabs = document.querySelectorAll('.tab-btn');
+      if (tabs[0]) tabs[0].textContent = `Pending (${merged.length})`;
+      if (tabs[1]) tabs[1].textContent = `Approved (${mergedApproved.length})`;
+    }).catch(() => {
+      // API not available — use localStorage only
+    });
 
     return `
       <div class="section-header">
@@ -1089,15 +1121,15 @@ const Admin = {
 
       <div class="tabs">
         <button class="tab-btn active" onclick="Admin.filterApprovals('pending', this)">
-          Pending (${pending.length})
+          Pending (${localPending.length})
         </button>
         <button class="tab-btn" onclick="Admin.filterApprovals('approved', this)">
-          Approved (${approved.length})
+          Approved (${localApproved.length})
         </button>
       </div>
 
       <div id="approvals-list">
-        ${this.renderApprovalsList(pending)}
+        ${this.renderApprovalsList(localPending)}
       </div>
     `;
   },
@@ -1167,6 +1199,12 @@ const Admin = {
     const user = DB.getUserById(id);
     if (!user) return;
     DB.updateUser(id, { status: 'approved' });
+
+    // Also approve via API if user has an API id
+    UsersAPI.approve(id).catch(() => {
+      // API not available — localStorage only
+    });
+
     DB.addNotification({
       type: 'info',
       targetUserId: id,
@@ -1183,6 +1221,12 @@ const Admin = {
     const user = DB.getUserById(id);
     if (!confirm(`Reject and delete ${user?.name}'s registration?`)) return;
     DB.deleteUser(id);
+
+    // Also delete via API
+    UsersAPI.delete(id).catch(() => {
+      // API not available — localStorage only
+    });
+
     DB.addChangeLog({ action: 'Account Rejected', details: `${user?.name} (${user?.role}) rejected`, by: Auth.getUser().name });
     showToast(`Registration rejected and removed.`, 'warning');
     this.navigate('approvals');
