@@ -6,6 +6,7 @@ const Admin = {
     const user = Auth.getUser();
     const unread = DB.getUnreadCount(user.id, 'admin');
     const pendingCount = DB.getAbsentRequests().filter(r => r.status === 'pending').length;
+    const pendingAccounts = DB.getUsers().filter(u => u.status === 'pending').length;
 
     document.getElementById('app').innerHTML = `
       <div class="layout">
@@ -22,6 +23,13 @@ const Admin = {
         ${this.renderNotifPanel()}
       </div>
     `;
+
+    // Show toast if there are pending account approvals
+    if (pendingAccounts > 0) {
+      setTimeout(() => {
+        showToast(`${pendingAccounts} account${pendingAccounts > 1 ? 's' : ''} waiting for your approval! Go to Account Approvals.`, 'warning');
+      }, 1000);
+    }
   },
 
   renderSidebar(unread, pendingCount) {

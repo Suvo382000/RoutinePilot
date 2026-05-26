@@ -150,7 +150,7 @@ const DB = {
 
   markAllNotifsRead(userId) {
     const notifs = this.getNotifications().map(n =>
-      (n.targetUserId === userId || n.targetRole === 'all') ? { ...n, read: true } : n
+      (n.targetUserId === userId || n.targetRole === 'all' || n.targetRole === 'admin') ? { ...n, read: true } : n
     );
     this.saveNotifications(notifs);
   },

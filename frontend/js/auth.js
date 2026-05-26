@@ -590,19 +590,17 @@ function handleSignup(e) {
         DB.addUser(userData);
       }
 
-      // Notify admin only for teacher/student signups
+      // Always add notification to localStorage so admin sees it on dashboard
       if (signupRole !== 'admin') {
-        try {
-          // API handles notification automatically
-        } catch(e) {
-          DB.addNotification({
-            type: 'info', targetRole: 'admin',
-            title: 'New Account Request',
-            message: `${name} has registered as a ${signupRole} and is awaiting approval.`,
-            icon: '👤'
-          });
-        }
+        DB.addNotification({
+          type: 'info',
+          targetRole: 'admin',
+          title: 'New Account Request',
+          message: `${name} has registered as a ${signupRole} and is awaiting approval.`,
+          icon: '👤'
+        });
       }
+
       renderSignupSuccess(name, signupRole);
     };
 
