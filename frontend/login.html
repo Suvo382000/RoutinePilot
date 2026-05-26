@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login — RoutinePilot</title>
+  <link rel="stylesheet" href="css/landing.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="auth-body">
+
+  <!-- Back to home + theme toggle -->
+  <div class="auth-topbar">
+    <a href="index.html" class="auth-back">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <line x1="19" y1="12" x2="5" y2="12"/>
+        <polyline points="12 19 5 12 12 5"/>
+      </svg>
+      Back to Home
+    </a>
+    <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">
+      <span class="theme-icon">🌙</span>
+    </button>
+  </div>
+
+  <div class="auth-page-split">
+
+    <!-- LEFT PANEL -->
+    <div class="auth-left-panel">
+      <div class="auth-left-content">
+        <div class="auth-left-brand">
+          <div class="nav-logo large-logo">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="8" fill="white" fill-opacity="0.2"/>
+              <rect x="6" y="8" width="20" height="18" rx="3" stroke="white" stroke-width="2"/>
+              <line x1="6" y1="13" x2="26" y2="13" stroke="white" stroke-width="2"/>
+              <line x1="11" y1="6" x2="11" y2="11" stroke="white" stroke-width="2" stroke-linecap="round"/>
+              <line x1="21" y1="6" x2="21" y2="11" stroke="white" stroke-width="2" stroke-linecap="round"/>
+              <rect x="10" y="17" width="4" height="4" rx="1" fill="white"/>
+              <rect x="18" y="17" width="4" height="4" rx="1" fill="white" fill-opacity="0.6"/>
+            </svg>
+          </div>
+          <span>RoutinePilot</span>
+        </div>
+        <h2>Welcome back</h2>
+        <p>Sign in to access your dashboard and manage your academic schedule.</p>
+        <div class="auth-left-features">
+          <div class="auth-left-feat"><span>📋</span> View your class routine</div>
+          <div class="auth-left-feat"><span>🔔</span> Get real-time notifications</div>
+          <div class="auth-left-feat"><span>👨‍🏫</span> Manage substitutes</div>
+        </div>
+      </div>
+      <div class="auth-left-orb orb-a"></div>
+      <div class="auth-left-orb orb-b"></div>
+    </div>
+
+    <!-- RIGHT PANEL — LOGIN FORM -->
+    <div class="auth-right-panel">
+      <div class="auth-form-box" id="auth-form-wrap">
+        <!-- Rendered by auth.js -->
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/landing.js"></script>
+  <script>
+    // Override renderLogin to inject into auth-form-wrap
+    document.addEventListener('DOMContentLoaded', () => {
+      // Render login form into the box
+      document.getElementById('auth-form-wrap').innerHTML = renderLoginForm();
+    });
+  </script>
+</body>
+</html>

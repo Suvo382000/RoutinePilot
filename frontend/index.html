@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RoutinePilot — Smart Academic Scheduling</title>
+  <link rel="stylesheet" href="css/landing.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════
+       NAVBAR
+  ═══════════════════════════════════════ -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="nav-brand">
+        <div class="nav-logo">
+          <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+            <rect width="32" height="32" rx="8" fill="white" fill-opacity="0.2"/>
+            <rect x="6" y="8" width="20" height="18" rx="3" stroke="white" stroke-width="2"/>
+            <line x1="6" y1="13" x2="26" y2="13" stroke="white" stroke-width="2"/>
+            <line x1="11" y1="6" x2="11" y2="11" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            <line x1="21" y1="6" x2="21" y2="11" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            <rect x="10" y="17" width="4" height="4" rx="1" fill="white"/>
+            <rect x="18" y="17" width="4" height="4" rx="1" fill="white" fill-opacity="0.6"/>
+          </svg>
+        </div>
+        <span class="nav-brand-text">RoutinePilot</span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#roles">Roles</a></li>
+        <li><a href="#workflow">Workflow</a></li>
+        <li><a href="#about">About</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <button class="theme-toggle" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+          <span class="theme-icon">🌙</span>
+        </button>
+        <a href="login.html" class="btn-nav-outline">Login</a>
+        <a href="signup.html" class="btn-nav-solid">Sign Up</a>
+      </div>
+
+      <button class="nav-hamburger" id="hamburger" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+
+    <!-- Mobile menu -->
+    <div class="nav-mobile" id="navMobile">
+      <a href="#features">Features</a>
+      <a href="#roles">Roles</a>
+      <a href="#workflow">Workflow</a>
+      <a href="#about">About</a>
+      <div class="nav-mobile-actions">
+        <a href="login.html" class="btn-nav-outline">Login</a>
+        <a href="signup.html" class="btn-nav-solid">Sign Up</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════
+       HERO
+  ═══════════════════════════════════════ -->
+  <section class="hero" id="home">
+    <div class="hero-bg">
+      <div class="hero-orb orb-1"></div>
+      <div class="hero-orb orb-2"></div>
+      <div class="hero-orb orb-3"></div>
+      <div class="hero-grid"></div>
+    </div>
+
+    <div class="hero-container">
+      <!-- LEFT COLUMN -->
+      <div class="hero-left">
+        <div class="hero-badge animate-fade-up">
+          <span class="badge-dot"></span>
+          Smart Academic Scheduling Platform
+        </div>
+
+        <h1 class="hero-title animate-fade-up delay-1">
+          Manage Class Routines<br/>
+          <span class="hero-gradient-text">Effortlessly</span>
+        </h1>
+
+        <p class="hero-subtitle animate-fade-up delay-2">
+          A unified platform for universities, colleges, and schools to create, manage,
+          and share class schedules — with real-time notifications and smart conflict detection.
+        </p>
+
+        <div class="hero-stats animate-fade-up delay-3">
+          <div class="hero-stat">
+            <span class="stat-num" data-target="3">0</span>
+            <span class="stat-label">User Roles</span>
+          </div>
+          <div class="hero-stat-divider"></div>
+          <div class="hero-stat">
+            <span class="stat-num" data-target="8">0</span>
+            <span class="stat-label">Semesters</span>
+          </div>
+          <div class="hero-stat-divider"></div>
+          <div class="hero-stat">
+            <span class="stat-num" data-target="7">0</span>
+            <span class="stat-label">Daily Slots</span>
+          </div>
+          <div class="hero-stat-divider"></div>
+          <div class="hero-stat">
+            <span class="stat-num" data-target="6">0</span>
+            <span class="stat-label">Departments</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN — Live Stats Card -->
+      <div class="hero-right animate-fade-up delay-3">
+        <div class="stats-live-card">
+          <div class="slc-header">
+            <div class="slc-header-left">
+              <div class="slc-dot green"></div>
+              <span>Live System Stats</span>
+            </div>
+            <span class="slc-badge">Real-time</span>
+          </div>
+
+          <div class="slc-grid">
+            <div class="slc-stat">
+              <div class="slc-icon" style="background:linear-gradient(135deg,#ede9fe,#ddd6fe);">🎓</div>
+              <div class="slc-info">
+                <span class="slc-num" id="stat-students">0</span>
+                <span class="slc-label">Students</span>
+              </div>
+            </div>
+            <div class="slc-stat">
+              <div class="slc-icon" style="background:linear-gradient(135deg,#d1fae5,#a7f3d0);">👨‍🏫</div>
+              <div class="slc-info">
+                <span class="slc-num" id="stat-teachers">0</span>
+                <span class="slc-label">Teachers</span>
+              </div>
+            </div>
+            <div class="slc-stat">
+              <div class="slc-icon" style="background:linear-gradient(135deg,#fef3c7,#fde68a);">📚</div>
+              <div class="slc-info">
+                <span class="slc-num" id="stat-subjects">0</span>
+                <span class="slc-label">Subjects</span>
+              </div>
+            </div>
+            <div class="slc-stat">
+              <div class="slc-icon" style="background:linear-gradient(135deg,#cffafe,#a5f3fc);">🏢</div>
+              <div class="slc-info">
+                <span class="slc-num" id="stat-departments">0</span>
+                <span class="slc-label">Departments</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="slc-divider"></div>
+
+          <div class="slc-extra">
+            <div class="slc-extra-item">
+              <span class="slc-extra-icon">📋</span>
+              <div>
+                <span class="slc-extra-num" id="stat-routines">0</span>
+                <span class="slc-extra-label">Active Routines</span>
+              </div>
+            </div>
+            <div class="slc-extra-item">
+              <span class="slc-extra-icon">📅</span>
+              <div>
+                <span class="slc-extra-num">6</span>
+                <span class="slc-extra-label">Working Days</span>
+              </div>
+            </div>
+            <div class="slc-extra-item">
+              <span class="slc-extra-icon">⏰</span>
+              <div>
+                <span class="slc-extra-num">7</span>
+                <span class="slc-extra-label">Daily Slots</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="slc-footer">
+            <span class="slc-dot pulse-dot"></span>
+            Updated from your institution's data
+          </div>
+        </div>
+      </div>
+      </div><!-- end hero-right -->
+    </div><!-- end hero-container -->
+  </section>
+
+  <!-- ═══════════════════════════════════════
+       FEATURES
+  ═══════════════════════════════════════ -->
+  <section class="section" id="features">
+    <div class="section-container">
+      <div class="section-header">
+        <div class="section-badge">Features</div>
+        <h2 class="section-title">Everything you need to manage schedules</h2>
+        <p class="section-subtitle">Built for academic institutions of all sizes — from small schools to large universities.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon" style="background:linear-gradient(135deg,#ede9fe,#ddd6fe);">📋</div>
+          <h3>Smart Routine Builder</h3>
+          <p>Create weekly class schedules with drag-and-drop simplicity. Supports theory (1hr) and lab (4hr) classes with automatic break management.</p>
+        </div>
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon" style="background:linear-gradient(135deg,#d1fae5,#a7f3d0);">⚡</div>
+          <h3>Conflict Detection</h3>
+          <p>Automatically detects when a teacher is double-booked across multiple routines. Prevents scheduling conflicts before they happen.</p>
+        </div>
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon" style="background:linear-gradient(135deg,#fef3c7,#fde68a);">🔔</div>
+          <h3>Real-time Notifications</h3>
+          <p>Students get instant alerts when their class changes. Notifications are targeted — only the affected class group is notified.</p>
+        </div>
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon" style="background:linear-gradient(135deg,#cffafe,#a5f3fc);">👨‍🏫</div>
+          <h3>Substitute Management</h3>
+          <p>Teachers report absences directly. Admin assigns substitutes with one click. Students see who's taking the class automatically.</p>
+        </div>
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon" style="background:linear-gradient(135deg,#fce7f3,#fbcfe8);">🏢</div>
+          <h3>Department Management</h3>
+          <p>Add, rename, or remove departments. All linked teachers, students, and routines update automatically when a department is renamed.</p>
+        </div>
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon" style="background:linear-gradient(135deg,#e0e7ff,#c7d2fe);">🔒</div>
+          <h3>Role-based Access</h3>
+          <p>Three distinct roles — Admin, Teacher, Student — each with their own dashboard, permissions, and view of the schedule.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════
+       ROLES
+  ═══════════════════════════════════════ -->
+  <section class="section section-alt" id="roles">
+    <div class="section-container">
+      <div class="section-header">
+        <div class="section-badge">User Roles</div>
+        <h2 class="section-title">Three roles, one platform</h2>
+        <p class="section-subtitle">Each role has a dedicated dashboard tailored to their needs.</p>
+      </div>
+
+      <div class="roles-grid">
+        <div class="role-card admin-card animate-on-scroll">
+          <div class="role-icon">🛡️</div>
+          <h3>Admin</h3>
+          <p class="role-desc">Full control over the entire system</p>
+          <ul class="role-features">
+            <li>✓ Create & manage routines</li>
+            <li>✓ Assign teachers to classes</li>
+            <li>✓ Approve/reject absence requests</li>
+            <li>✓ Assign substitute teachers</li>
+            <li>✓ Manage departments & users</li>
+            <li>✓ View change log history</li>
+          </ul>
+          <a href="login.html" class="role-cta">Login as Admin →</a>
+        </div>
+
+        <div class="role-card teacher-card animate-on-scroll">
+          <div class="role-icon">👨‍🏫</div>
+          <h3>Teacher</h3>
+          <p class="role-desc">Manage your personal schedule</p>
+          <ul class="role-features">
+            <li>✓ View personal class routine</li>
+            <li>✓ See today's classes highlighted</li>
+            <li>✓ Report absence with message</li>
+            <li>✓ Track absence request status</li>
+            <li>✓ Get substitute assignment alerts</li>
+            <li>✓ Cross-department class support</li>
+          </ul>
+          <a href="login.html" class="role-cta">Login as Teacher →</a>
+        </div>
+
+        <div class="role-card student-card animate-on-scroll">
+          <div class="role-icon">🎓</div>
+          <h3>Student</h3>
+          <p class="role-desc">Stay updated on your schedule</p>
+          <ul class="role-features">
+            <li>✓ View full weekly timetable</li>
+            <li>✓ See today's classes at a glance</li>
+            <li>✓ Get class change notifications</li>
+            <li>✓ Know who's taking substitute class</li>
+            <li>✓ View lab & theory schedules</li>
+            <li>✓ Print/export timetable</li>
+          </ul>
+          <a href="login.html" class="role-cta">Login as Student →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════
+       WORKFLOW
+  ═══════════════════════════════════════ -->
+  <section class="section" id="workflow">
+    <div class="section-container">
+      <div class="section-header">
+        <div class="section-badge">How It Works</div>
+        <h2 class="section-title">Simple workflow, powerful results</h2>
+        <p class="section-subtitle">From setup to daily use — everything works in a few steps.</p>
+      </div>
+
+      <div class="workflow-steps">
+        <div class="workflow-step animate-on-scroll">
+          <div class="step-number">01</div>
+          <div class="step-content">
+            <h3>Admin sets up departments & teachers</h3>
+            <p>Create departments (CSE, IT, ECE…), add teacher accounts with their designation (HOD, Associate, Assistant) and faculty type (Permanent/Visiting).</p>
+          </div>
+        </div>
+        <div class="workflow-connector"></div>
+
+        <div class="workflow-step animate-on-scroll">
+          <div class="step-number">02</div>
+          <div class="step-content">
+            <h3>Build class routines</h3>
+            <p>Create weekly routines for each department, year, and semester. Assign teachers to theory (1hr) or lab (4hr) slots. The system checks for conflicts automatically.</p>
+          </div>
+        </div>
+        <div class="workflow-connector"></div>
+
+        <div class="workflow-step animate-on-scroll">
+          <div class="step-number">03</div>
+          <div class="step-content">
+            <h3>Teachers & students access their schedules</h3>
+            <p>Teachers see only their assigned classes. Students see their department's full timetable. Everyone gets a clean, day-highlighted view.</p>
+          </div>
+        </div>
+        <div class="workflow-connector"></div>
+
+        <div class="workflow-step animate-on-scroll">
+          <div class="step-number">04</div>
+          <div class="step-content">
+            <h3>Absence & substitute flow</h3>
+            <p>Teacher reports absence → Admin gets notified → Admin approves and assigns substitute → Only affected students get a targeted notification with the substitute's name.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════
+       SCHEDULE PREVIEW
+  ═══════════════════════════════════════ -->
+  <section class="section section-alt" id="about">
+    <div class="section-container">
+      <div class="section-header">
+        <div class="section-badge">Schedule Structure</div>
+        <h2 class="section-title">Designed around your academic day</h2>
+        <p class="section-subtitle">Fixed time slots with built-in breaks — no configuration needed.</p>
+      </div>
+
+      <div class="schedule-preview-grid">
+        <div class="schedule-info animate-on-scroll">
+          <div class="schedule-item">
+            <div class="schedule-dot theory-dot"></div>
+            <div>
+              <strong>7 Theory Slots</strong>
+              <span>9:30 AM – 5:30 PM, 1 hour each</span>
+            </div>
+          </div>
+          <div class="schedule-item">
+            <div class="schedule-dot break-dot"></div>
+            <div>
+              <strong>Short Break</strong>
+              <span>11:30 – 11:45 AM (15 minutes)</span>
+            </div>
+          </div>
+          <div class="schedule-item">
+            <div class="schedule-dot lunch-dot"></div>
+            <div>
+              <strong>Lunch Break</strong>
+              <span>1:45 – 2:30 PM (45 minutes)</span>
+            </div>
+          </div>
+          <div class="schedule-item">
+            <div class="schedule-dot lab-dot"></div>
+            <div>
+              <strong>Lab Classes (4 hrs)</strong>
+              <span>Splits: 1+3 hrs, 3+1 hrs, or 2+2 hrs</span>
+            </div>
+          </div>
+          <div class="schedule-item">
+            <div class="schedule-dot days-dot"></div>
+            <div>
+              <strong>6 Working Days</strong>
+              <span>Monday through Saturday</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="schedule-table-preview animate-on-scroll">
+          <div class="stp-header">
+            <span>Time</span>
+            <span>Mon</span><span>Tue</span><span>Wed</span>
+          </div>
+          <div class="stp-row">
+            <span class="stp-time">9:30–10:30</span>
+            <span class="stp-cell theory-cell">Data Structures</span>
+            <span class="stp-cell theory-cell">Algorithms</span>
+            <span class="stp-cell empty-cell">—</span>
+          </div>
+          <div class="stp-row">
+            <span class="stp-time">10:30–11:30</span>
+            <span class="stp-cell theory-cell">Database</span>
+            <span class="stp-cell empty-cell">—</span>
+            <span class="stp-cell theory-cell">Web Tech</span>
+          </div>
+          <div class="stp-break">☕ Short Break 11:30–11:45</div>
+          <div class="stp-row">
+            <span class="stp-time">11:45–12:45</span>
+            <span class="stp-cell empty-cell">—</span>
+            <span class="stp-cell theory-cell">Data Struct.</span>
+            <span class="stp-cell theory-cell">Database</span>
+          </div>
+          <div class="stp-row">
+            <span class="stp-time">12:45–13:45</span>
+            <span class="stp-cell empty-cell">—</span>
+            <span class="stp-cell empty-cell">—</span>
+            <span class="stp-cell empty-cell">—</span>
+          </div>
+          <div class="stp-break lunch">🍽️ Lunch Break 13:45–14:30</div>
+          <div class="stp-row">
+            <span class="stp-time">14:30–17:30</span>
+            <span class="stp-cell lab-cell" style="grid-column:span 1;">Lab (3hr)</span>
+            <span class="stp-cell empty-cell">—</span>
+            <span class="stp-cell lab-cell">Lab (3hr)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════
+       CTA
+  ═══════════════════════════════════════ -->
+  <section class="cta-section">
+    <div class="cta-orb cta-orb-1"></div>
+    <div class="cta-orb cta-orb-2"></div>
+    <div class="cta-container">
+      <h2 class="cta-title animate-on-scroll">Ready to streamline your scheduling?</h2>
+      <p class="cta-subtitle animate-on-scroll">Join thousands of institutions already using RoutinePilot to manage their academic routines.</p>
+      <div class="cta-actions animate-on-scroll">
+        <a href="signup.html" class="btn-hero-primary">Create Free Account</a>
+        <a href="login.html" class="btn-hero-secondary" style="color:#fff;border-color:rgba(255,255,255,.4);">Sign In</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════
+       FOOTER
+  ═══════════════════════════════════════ -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-brand">
+        <div class="footer-logo">
+          <div class="nav-logo">
+            <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="8" fill="white" fill-opacity="0.2"/>
+              <rect x="6" y="8" width="20" height="18" rx="3" stroke="white" stroke-width="2"/>
+              <line x1="6" y1="13" x2="26" y2="13" stroke="white" stroke-width="2"/>
+              <line x1="11" y1="6" x2="11" y2="11" stroke="white" stroke-width="2" stroke-linecap="round"/>
+              <line x1="21" y1="6" x2="21" y2="11" stroke="white" stroke-width="2" stroke-linecap="round"/>
+              <rect x="10" y="17" width="4" height="4" rx="1" fill="white"/>
+            </svg>
+          </div>
+          <span>RoutinePilot</span>
+        </div>
+        <p>RoutinePilot — built for universities, colleges, and schools to manage class schedules efficiently.</p>
+      </div>
+
+      <div class="footer-links">
+        <div class="footer-col">
+          <h4>Platform</h4>
+          <a href="#features">Features</a>
+          <a href="#roles">User Roles</a>
+          <a href="#workflow">How It Works</a>
+          <a href="#about">Schedule Info</a>
+        </div>
+        <div class="footer-col">
+          <h4>Access</h4>
+          <a href="login.html">Login</a>
+          <a href="signup.html">Sign Up</a>
+          <a href="dashboard.html">Dashboard</a>
+        </div>
+        <div class="footer-col">
+          <h4>Roles</h4>
+          <a href="login.html">Admin Portal</a>
+          <a href="login.html">Teacher Portal</a>
+          <a href="login.html">Student Portal</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span>© 2025 RoutinePilot. All rights reserved.</span>
+      <span>Built with ❤️ for academic institutions</span>
+    </div>
+  </footer>
+
+  <script src="js/data.js"></script>
+  <script src="js/landing.js"></script>
+</body>
+</html>
