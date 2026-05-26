@@ -179,3 +179,67 @@ const DeptAPI = {
 const ConstantsAPI = {
   async get() { return await apiFetch('/constants').catch(() => null); }
 };
+
+// ===== DATA SYNC =====
+// Syncs MongoDB data into localStorage so all DB.* calls work correctly
+const DataSync = {
+  async syncAll() {
+    try {
+      await Promise.all([
+        this.syncUsers(),
+        this.syncRoutines(),
+        this.syncNotifications()
+      ]);
+      console.log('[DataSync] All data synced from MongoDB');
+    } catch (e) {
+      console.warn('[DataSync] Sync failed (API may be down):', e.message);
+    }
+  },
+
+  async syncUsers() {
+    try {
+      const users = await UsersAPI.getAll();
+      if (users && users.length > 0) {
+        const mapped = users.map(u => ({ ...u, id: u._id || u.id }));
+        localStorage.setItem('rms_users', JSON.stringify(mapped));
+      }
+    } catch (e) { /* silent */ }
+  },
+
+  async syncRoutines() {
+    try {
+      const routines = await RoutinesAPI.getAll();
+      if (routines && routines.length > 0) {
+        const mapped = routines.map(r => ({
+          ...r,
+          id: r._id || r.id,
+          slots: (r.slots || []).map(s => ({
+            ...s,
+            teacherId: s.teacherId?._id || s.teacherId?.id || s.teacherId,
+            substituteTeacherId: s.substituteTeacherId?._id || s.substituteTeacherId?.id || s.substituteTeacherId
+          }))
+        }));
+        localStorage.setItem('rms_routines', JSON.stringify(mapped));
+      }
+    } catch (e) { /* silent */ }
+  },
+
+  async syncNotifications() {
+    try {
+      const notifs = await NotifAPI.getAll();
+      if (notifs && notifs.length > 0) {
+        const mapped = notifs.map(n => ({
+          ...n,
+          id: n._id || n.id,
+          targetUserId: n.targetUserId?._id || n.targetUserId?.id || n.targetUserId
+        }));
+        // Merge with existing localStorage notifications (don't overwrite)
+        const existing = JSON.parse(localStorage.getItem('rms_notifications') || '[]');
+        const existingIds = new Set(existing.map(n => n.id));
+        const newNotifs = mapped.filter(n => !existingIds.has(n.id));
+        const merged = [...newNotifs, ...existing].slice(0, 100);
+        localStorage.setItem('rms_notifications', JSON.stringify(merged));
+      }
+    } catch (e) { /* silent */ }
+  }
+};

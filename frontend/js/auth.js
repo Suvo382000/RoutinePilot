@@ -950,26 +950,55 @@ function handleLogin(e) {
   const tryLogin = async () => {
     try {
       const user = await AuthAPI.login(email, password, selectedRole);
+      // Sync API user into localStorage so all DB.* calls work
+      const existing = DB.getUsers().find(u =>
+        u.email.toLowerCase() === user.email.toLowerCase()
+      );
+      if (!existing) {
+        // Add API user to localStorage with _id as id
+        const localUser = { ...user, id: user._id || user.id };
+        const users = DB.getUsers();
+        users.push(localUser);
+        DB.saveUsers(users);
+      } else if (existing.id !== (user._id || user.id)) {
+        // Update id to match MongoDB _id
+        DB.updateUser(existing.id, { ...user, id: user._id || user.id });
+      }
       btnText.textContent  = '✓ Success!';
       btn.style.background = 'linear-gradient(135deg,#10b981,#059669)';
-      setTimeout(() => { window.location.href = 'dashboard.html'; }, 600);
-    } catch (apiErr) {
-      // Fall back to localStorage login
-      const result = Auth.login(email, password, selectedRole);
-      if (result.success) {
-        btnText.textContent  = '✓ Success!';
-        btn.style.background = 'linear-gradient(135deg,#10b981,#059669)';
+      // Sync all data from MongoDB into localStorage before redirecting
+      DataSync.syncAll().finally(() => {
         setTimeout(() => { window.location.href = 'dashboard.html'; }, 600);
-      } else {
-        const msg = apiErr.message || result.message;
-        errEl.innerHTML     = `<span>⚠️</span> ${msg}`;
-        errEl.style.display = 'flex';
-        btn.disabled        = false;
-        btnText.textContent = 'Sign In';
-        errEl.classList.remove('shake');
-        void errEl.offsetWidth;
-        errEl.classList.add('shake');
+      });
+    } catch (apiErr) {
+      // Only fall back to localStorage if it's a network error (API down)
+      // Don't fall back for auth errors (wrong password, pending account)
+      const isNetworkError = apiErr.message && (
+        apiErr.message.includes('Failed to fetch') ||
+        apiErr.message.includes('NetworkError') ||
+        apiErr.message.includes('fetch')
+      );
+
+      if (isNetworkError) {
+        // API is down — try localStorage
+        const result = Auth.login(email, password, selectedRole);
+        if (result.success) {
+          btnText.textContent  = '✓ Success!';
+          btn.style.background = 'linear-gradient(135deg,#10b981,#059669)';
+          setTimeout(() => { window.location.href = 'dashboard.html'; }, 600);
+          return;
+        }
       }
+
+      // Show the actual error from API
+      const msg = apiErr.message || 'Login failed. Please try again.';
+      errEl.innerHTML     = `<span>⚠️</span> ${msg}`;
+      errEl.style.display = 'flex';
+      btn.disabled        = false;
+      btnText.textContent = 'Sign In';
+      errEl.classList.remove('shake');
+      void errEl.offsetWidth;
+      errEl.classList.add('shake');
     }
   };
 
