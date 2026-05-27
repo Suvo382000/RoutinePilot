@@ -150,8 +150,8 @@ const Student = {
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">
               ${todaySlots.map(s => {
                 const teacher = s.substituteTeacherId
-                  ? DB.getUserById(s.substituteTeacherId)
-                  : DB.getUserById(s.teacherId);
+                  ? (DB.getUserById(s.substituteTeacherId) || { name: s.substituteTeacherName || 'Substitute' })
+                  : (DB.getUserById(s.teacherId) || { name: s.teacherName || 'TBA' });
                 const isChanged = !!s.substituteTeacherId;
                 const isLab = s.classType === 'practical' || isLabPeriod(s.period);
                 return `
@@ -252,7 +252,9 @@ const Student = {
                 if (!slot) return `<td class="${day === today ? 'today-col' : ''}"><span class="empty-cell">—</span></td>`;
                 const rowspan   = slot.spanSlots.length;
                 const isChanged = !!slot.substituteTeacherId;
-                const teacher   = isChanged ? DB.getUserById(slot.substituteTeacherId) : DB.getUserById(slot.teacherId);
+                const teacher   = isChanged
+                  ? (DB.getUserById(slot.substituteTeacherId) || { name: slot.substituteTeacherName || 'Substitute' })
+                  : (DB.getUserById(slot.teacherId) || { name: slot.teacherName || 'TBA' });
                 const isLab     = slot.classType === 'practical' || isLabPeriod(slot.period);
                 const periodInfo = getPeriodInfo(slot.period);
                 const allSlots = getPeriodSlots(slot.period);

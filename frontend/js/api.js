@@ -233,10 +233,13 @@ const DataSync = {
         const mapped = routines.map(r => ({
           ...r,
           id: r._id || r.id,
+          _mongoId: r._id || r.id,
           slots: (r.slots || []).map(s => ({
             ...s,
             teacherId: s.teacherId?._id || s.teacherId?.id || s.teacherId,
-            substituteTeacherId: s.substituteTeacherId?._id || s.substituteTeacherId?.id || s.substituteTeacherId
+            teacherName: s.teacherId?.name || s.teacherName || '',
+            substituteTeacherId: s.substituteTeacherId?._id || s.substituteTeacherId?.id || s.substituteTeacherId || null,
+            substituteTeacherName: s.substituteTeacherId?.name || s.substituteTeacherName || ''
           }))
         }));
         localStorage.setItem('rms_routines', JSON.stringify(mapped));

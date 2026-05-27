@@ -408,7 +408,9 @@ const Admin = {
                 const rowspan = slot.spanSlots.length;
                 const teacher = DB.getUserById(slot.teacherId);
                 const isChanged = slot.substituteTeacherId;
-                const displayTeacher = isChanged ? DB.getUserById(slot.substituteTeacherId) : teacher;
+                const displayTeacher = isChanged
+                  ? (DB.getUserById(slot.substituteTeacherId) || { name: slot.substituteTeacherName || 'Substitute' })
+                  : (teacher || { name: slot.teacherName || 'TBA' });
                 const isLab = slot.classType === 'practical' || isLabPeriod(slot.period);
                 const periodInfo = getPeriodInfo(slot.period);
                 const isFirstPart = !slot.labPart || slot.spanSlots[0] === getPeriodSlots(slot.period)[0];
@@ -1957,12 +1959,28 @@ const Admin = {
       `Approved! ${sub.name} assigned. ${studentCount} student${studentCount !== 1 ? 's' : ''} in ${affectedRoutine?.department || ''} ${affectedRoutine?.year || ''} notified.`,
       'success'
     );
+
+    // Also call backend API to persist the approval in MongoDB
+    const mongoReqId = req._mongoId || req._id || id;
+    const mongoSubId = sub?._mongoId || sub?._id || subId;
+    AbsentAPI.approve(mongoReqId, mongoSubId).catch(err => {
+      console.warn('[confirmApprove] API approve failed:', err?.message);
+    });
+
     this.navigate('absent');
   },
 
   rejectAbsent(id) {
     if (!confirm('Reject this absent request?')) return;
     DB.updateAbsentRequest(id, { status: 'rejected' });
+
+    // Also reject via API
+    const req = DB.getAbsentRequests().find(r => r.id === id);
+    const mongoId = req?._mongoId || req?._id || id;
+    AbsentAPI.reject(mongoId).catch(err => {
+      console.warn('[rejectAbsent] API reject failed:', err?.message);
+    });
+
     showToast('Request rejected.', 'warning');
     this.navigate('absent');
   },
