@@ -1608,6 +1608,23 @@ const Admin = {
       userData.semester = document.getElementById('nu-semester')?.value;
     }
     DB.addUser(userData);
+
+    // Also create in MongoDB
+    UsersAPI.create(userData).then(apiUser => {
+      // Update localStorage with MongoDB _id
+      if (apiUser && apiUser._id) {
+        const users = DB.getUsers();
+        const local = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+        if (local) {
+          local._mongoId = apiUser._id;
+          local.id = apiUser._id;
+          DB.saveUsers(users);
+        }
+      }
+    }).catch(err => {
+      console.warn('[saveNewUser] API create failed:', err?.message);
+    });
+
     closeModal();
     showToast(`${role.charAt(0).toUpperCase() + role.slice(1)} added!`, 'success');
     this.navigate(role === 'teacher' ? 'teachers' : 'students');
@@ -1677,6 +1694,13 @@ const Admin = {
     }
 
     DB.updateUser(id, updates);
+
+    // Also update in MongoDB
+    const mongoId = user?._mongoId || user?._id || id;
+    UsersAPI.update(mongoId, updates).catch(err => {
+      console.warn('[saveEditUser] API update failed:', err?.message);
+    });
+
     closeModal();
     showToast('User updated!', 'success');
     this.navigate(user.role === 'teacher' ? 'teachers' : 'students');
@@ -1685,8 +1709,20 @@ const Admin = {
   deleteUser(id) {
     const user = DB.getUserById(id);
     if (!confirm(`Delete user "${user?.name}"?`)) return;
+
+    // Get MongoDB _id for API call
+    const mongoId = user?._mongoId || user?._id || id;
+
+    // Delete from MongoDB
+    UsersAPI.delete(mongoId).catch(err => {
+      console.warn('[deleteUser] API delete failed:', err?.message);
+    });
+
+    // Delete from localStorage
     DB.deleteUser(id);
-    showToast('User deleted.', 'warning');
+
+    DB.addChangeLog({ action: 'User Deleted', details: `${user?.name} (${user?.role}) deleted`, by: Auth.getUser().name });
+    showToast(`${user?.name} deleted.`, 'warning');
     this.navigate(user.role === 'teacher' ? 'teachers' : 'students');
   },
 
