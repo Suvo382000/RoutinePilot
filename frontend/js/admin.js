@@ -1081,6 +1081,18 @@ const Admin = {
   renderApprovals() {
     const self = this;
 
+    // Check if we have a token first
+    const token = localStorage.getItem('rms_token');
+
+    if (!token) {
+      // No token — admin logged in via localStorage fallback
+      // Try to get token by re-authenticating
+      const adminUser = Auth.getUser();
+      if (adminUser) {
+        AuthAPI.login(adminUser.email, adminUser.password || '', 'admin').catch(() => {});
+      }
+    }
+
     // Fetch fresh from API every time
     UsersAPI.getPending().then(apiPending => {
       if (!Array.isArray(apiPending)) return;
@@ -1114,11 +1126,39 @@ const Admin = {
       if (tabs[0]) tabs[0].textContent = `Pending (${merged.length})`;
       if (tabs[1]) tabs[1].textContent = `Approved (${mergedApproved.length})`;
     }).catch(err => {
-      console.warn('[Approvals] API error:', err?.message);
+      console.warn('[Approvals] API error:', err?.status, err?.message);
       const listEl = document.getElementById('approvals-list');
-      if (listEl) {
+      if (!listEl) return;
+
+      if (err?.status === 401 || err?.status === 403) {
+        // Token expired — show re-login prompt
+        listEl.innerHTML = `
+          <div style="text-align:center;padding:40px 20px;">
+            <div style="font-size:32px;margin-bottom:12px;">🔐</div>
+            <h3 style="margin-bottom:8px;">Session Expired</h3>
+            <p style="color:var(--muted);font-size:13px;margin-bottom:20px;">
+              Your session has expired. Please log out and log back in to view pending approvals.
+            </p>
+            <button class="btn btn-primary" onclick="App.logout()">🚪 Logout & Re-login</button>
+          </div>
+        `;
+      } else {
+        // Other error — show localStorage data with retry
         const local = DB.getUsers().filter(u => u.status === 'pending');
-        listEl.innerHTML = self.renderApprovalsList(local);
+        if (local.length > 0) {
+          listEl.innerHTML = self.renderApprovalsList(local);
+        } else {
+          listEl.innerHTML = `
+            <div style="text-align:center;padding:40px 20px;">
+              <div style="font-size:32px;margin-bottom:12px;">⚠️</div>
+              <h3 style="margin-bottom:8px;">Could not load from server</h3>
+              <p style="color:var(--muted);font-size:13px;margin-bottom:20px;">
+                Error: ${err?.message || 'Unknown error'}
+              </p>
+              <button class="btn btn-primary" onclick="Admin.navigate('approvals')">🔄 Retry</button>
+            </div>
+          `;
+        }
       }
     });
 

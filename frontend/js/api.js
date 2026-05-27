@@ -7,9 +7,18 @@ const API_BASE = window.location.hostname === 'localhost' || window.location.hos
 
 // Store JWT token
 const Token = {
-  get()        { return localStorage.getItem('rms_token'); },
-  set(t)       { localStorage.setItem('rms_token', t); },
-  clear()      { localStorage.removeItem('rms_token'); }
+  get()        {
+    return localStorage.getItem('rms_token') ||
+           sessionStorage.getItem('rms_token_backup') || null;
+  },
+  set(t)       {
+    localStorage.setItem('rms_token', t);
+    sessionStorage.setItem('rms_token_backup', t);
+  },
+  clear()      {
+    localStorage.removeItem('rms_token');
+    sessionStorage.removeItem('rms_token_backup');
+  }
 };
 
 // Base fetch with auth header
@@ -33,6 +42,8 @@ const AuthAPI = {
       body: JSON.stringify({ email, password, role })
     });
     Token.set(data.token);
+    // Store token in sessionStorage as backup too
+    sessionStorage.setItem('rms_token_backup', data.token);
     // Store user in session
     sessionStorage.setItem('rms_current_user', JSON.stringify({ ...data.user, id: data.user._id }));
     return data.user;
