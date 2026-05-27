@@ -175,6 +175,15 @@ const DB = {
     log.createdAt = new Date().toISOString();
     logs.unshift(log);
     this.set('changelog', logs);
+
+    // Also push to backend API so other devices see it
+    if (typeof ChangelogAPI !== 'undefined') {
+      ChangelogAPI.create({
+        action: log.action,
+        details: log.details,
+        by: log.by
+      }).catch(() => {});
+    }
   },
 
   // Departments

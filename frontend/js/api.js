@@ -186,7 +186,88 @@ const DeptAPI = {
   async delete(id)      { return await apiFetch(`/departments/${id}`, { method: 'DELETE' }); }
 };
 
+// ===== CHANGELOG API =====
+const ChangelogAPI = {
+  async getAll() { return await apiFetch('/changelog'); },
+  async create(entry) {
+    return await apiFetch('/changelog', { method: 'POST', body: JSON.stringify(entry) });
+  }
+};
+
 // ===== CONSTANTS API =====
 const ConstantsAPI = {
   async get() { return await apiFetch('/constants').catch(() => null); }
+};
+
+// ===== DATA SYNC =====
+// Syncs MongoDB data into localStorage so all DB.* calls work correctly
+const DataSync = {
+  async syncAll() {
+    try {
+      await Promise.all([
+        this.syncUsers(),
+        this.syncRoutines(),
+        this.syncNotifications(),
+        this.syncChangelog()
+      ]);
+      console.log('[DataSync] All data synced from MongoDB');
+    } catch (e) {
+      console.warn('[DataSync] Sync failed:', e.message);
+    }
+  },
+
+  async syncUsers() {
+    try {
+      const users = await UsersAPI.getAll();
+      if (Array.isArray(users) && users.length > 0) {
+        const mapped = users.map(u => ({ ...u, id: u._id || u.id, _mongoId: u._id || u.id }));
+        localStorage.setItem('rms_users', JSON.stringify(mapped));
+      }
+    } catch (e) { /* silent */ }
+  },
+
+  async syncRoutines() {
+    try {
+      const routines = await RoutinesAPI.getAll();
+      if (Array.isArray(routines)) {
+        const mapped = routines.map(r => ({
+          ...r,
+          id: r._id || r.id,
+          slots: (r.slots || []).map(s => ({
+            ...s,
+            teacherId: s.teacherId?._id || s.teacherId?.id || s.teacherId,
+            substituteTeacherId: s.substituteTeacherId?._id || s.substituteTeacherId?.id || s.substituteTeacherId
+          }))
+        }));
+        localStorage.setItem('rms_routines', JSON.stringify(mapped));
+      }
+    } catch (e) { /* silent */ }
+  },
+
+  async syncNotifications() {
+    try {
+      const notifs = await NotifAPI.getAll();
+      if (Array.isArray(notifs)) {
+        const mapped = notifs.map(n => ({
+          ...n,
+          id: n._id || n.id,
+          targetUserId: n.targetUserId?._id || n.targetUserId?.id || n.targetUserId
+        }));
+        localStorage.setItem('rms_notifications', JSON.stringify(mapped));
+      }
+    } catch (e) { /* silent */ }
+  },
+
+  async syncChangelog() {
+    try {
+      const logs = await ChangelogAPI.getAll();
+      if (Array.isArray(logs)) {
+        const mapped = logs.map(l => ({
+          ...l,
+          id: l._id || l.id
+        }));
+        localStorage.setItem('rms_changelog', JSON.stringify(mapped));
+      }
+    } catch (e) { /* silent */ }
+  }
 };

@@ -24,6 +24,17 @@ const Admin = {
       </div>
     `;
 
+    // Sync data from MongoDB so dashboard shows fresh data
+    if (typeof DataSync !== 'undefined') {
+      DataSync.syncAll().then(() => {
+        // Re-render dashboard with fresh data
+        const body = document.getElementById('admin-page-body');
+        if (body && this.currentSection === 'dashboard') {
+          body.innerHTML = this.renderDashboard();
+        }
+      }).catch(() => {});
+    }
+
     // Show toast if there are pending account approvals
     if (pendingAccounts > 0) {
       setTimeout(() => {
