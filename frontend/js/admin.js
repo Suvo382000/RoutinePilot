@@ -836,7 +836,19 @@ const Admin = {
       return;
     }
 
-    DB.addRoutine({ name, department: dept, year, semester, slots });
+    const newRoutine = DB.addRoutine({ name, department: dept, year, semester, slots });
+
+    // Also create in MongoDB
+    RoutinesAPI.create({ name, department: dept, year, semester, slots, skipValidation: true }).then(result => {
+      const apiRoutine = result?.routine || result;
+      if (apiRoutine?._id) {
+        // Update localStorage with MongoDB _id
+        DB.updateRoutine(newRoutine.id, { _mongoId: apiRoutine._id, _id: apiRoutine._id });
+      }
+    }).catch(err => {
+      console.warn('[saveRoutine] API create failed:', err?.message);
+    });
+
     DB.addChangeLog({ action: 'Created', details: `Routine "${name}" created`, by: Auth.getUser().name });
     showToast('Routine created successfully!', 'success');
     this.navigate('routines');
@@ -1074,6 +1086,13 @@ const Admin = {
     }
 
     DB.updateRoutine(routineId, { slots });
+
+    // Also update in MongoDB
+    const mongoId = routine?._mongoId || routine?._id || routineId;
+    RoutinesAPI.update(mongoId, { slots, skipValidation: true }).catch(err => {
+      console.warn('[saveEditedSlots] API update failed:', err?.message);
+    });
+
     DB.addChangeLog({ action: 'Updated', details: `Slots updated for "${routine.name}"`, by: Auth.getUser().name });
     closeModal();
     showToast('Routine updated!', 'success');
@@ -1083,6 +1102,14 @@ const Admin = {
   deleteRoutine(id) {
     const routine = DB.getRoutineById(id);
     if (!confirm(`Delete routine "${routine?.name}"? This cannot be undone.`)) return;
+
+    // Delete from MongoDB
+    const mongoId = routine?._mongoId || routine?._id || id;
+    RoutinesAPI.delete(mongoId).catch(err => {
+      console.warn('[deleteRoutine] API delete failed:', err?.message);
+    });
+
+    // Delete from localStorage
     DB.deleteRoutine(id);
     DB.addChangeLog({ action: 'Deleted', details: `Routine "${routine?.name}" deleted`, by: Auth.getUser().name });
     showToast('Routine deleted.', 'warning');
