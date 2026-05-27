@@ -34,7 +34,6 @@ const Student = {
         }
       }).catch(() => {});
     }
-    }
   },
 
   renderSidebar(unread) {
