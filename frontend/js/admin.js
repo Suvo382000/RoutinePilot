@@ -1079,46 +1079,58 @@ const Admin = {
   },
 
   renderApprovals() {
-    // Show loading state first, then fetch from API
-    const body = document.getElementById('admin-page-body');
+    const self = this;
 
-    // Render with localStorage data immediately
-    const localPending  = DB.getUsers().filter(u => u.status === 'pending');
-    const localApproved = DB.getUsers().filter(u => u.status === 'approved' && u.role !== 'admin');
-
-    // Also fetch from API to get users who signed up via backend
+    // Fetch fresh from API every time
     UsersAPI.getPending().then(apiPending => {
-      // Merge API pending users into localStorage
+      if (!Array.isArray(apiPending)) return;
+
+      // Sync into localStorage preserving MongoDB _id
+      const currentUsers = DB.getUsers();
+      let changed = false;
       apiPending.forEach(apiUser => {
-        const exists = DB.getUsers().find(u =>
-          u.email === apiUser.email || u.id === apiUser._id
+        const mongoId = String(apiUser._id || apiUser.id || '');
+        const exists = currentUsers.find(u =>
+          u.email.toLowerCase() === apiUser.email.toLowerCase()
         );
         if (!exists) {
-          // Add API user to localStorage with mapped id
-          DB.addUser({
-            ...apiUser,
-            id: apiUser._id || apiUser.id,
-            status: 'pending'
-          });
+          currentUsers.push({ ...apiUser, id: mongoId, _mongoId: mongoId, status: 'pending' });
+          changed = true;
+        } else {
+          exists._mongoId = mongoId;
+          if (exists.status !== 'pending') { exists.status = 'pending'; changed = true; }
         }
       });
-      // Re-render with merged data
+      if (changed) DB.saveUsers(currentUsers);
+
+      const listEl = document.getElementById('approvals-list');
+      if (!listEl) return;
       const merged = DB.getUsers().filter(u => u.status === 'pending');
-      const mergedApproved = DB.getUsers().filter(u => u.status === 'approved' && u.role !== 'admin');
-      document.getElementById('approvals-list').innerHTML = this.renderApprovalsList(merged);
-      // Update tab counts
+      const mergedApproved = DB.getUsers().filter(u =>
+        (u.status === 'approved' || u.status === 'active') && u.role !== 'admin'
+      );
+      listEl.innerHTML = self.renderApprovalsList(merged);
       const tabs = document.querySelectorAll('.tab-btn');
       if (tabs[0]) tabs[0].textContent = `Pending (${merged.length})`;
       if (tabs[1]) tabs[1].textContent = `Approved (${mergedApproved.length})`;
-    }).catch(() => {
-      // API not available — use localStorage only
+    }).catch(err => {
+      console.warn('[Approvals] API error:', err?.message);
+      const listEl = document.getElementById('approvals-list');
+      if (listEl) {
+        const local = DB.getUsers().filter(u => u.status === 'pending');
+        listEl.innerHTML = self.renderApprovalsList(local);
+      }
     });
+
+    const localPending  = DB.getUsers().filter(u => u.status === 'pending');
+    const localApproved = DB.getUsers().filter(u =>
+      (u.status === 'approved' || u.status === 'active') && u.role !== 'admin'
+    );
 
     return `
       <div class="section-header">
         <div><h2>Account Approvals</h2><p>Review new user registrations</p></div>
       </div>
-
       <div class="tabs">
         <button class="tab-btn active" onclick="Admin.filterApprovals('pending', this)">
           Pending (${localPending.length})
@@ -1127,15 +1139,17 @@ const Admin = {
           Approved (${localApproved.length})
         </button>
       </div>
-
       <div id="approvals-list">
-        ${this.renderApprovalsList(localPending)}
+        <div style="text-align:center;padding:40px;color:var(--muted);">
+          <div style="font-size:28px;margin-bottom:10px;">⏳</div>
+          <div style="font-size:13px;">Loading pending accounts from server...</div>
+        </div>
       </div>
     `;
   },
 
   renderApprovalsList(users) {
-    if (users.length === 0) return `
+    if (!users || users.length === 0) return `
       <div class="empty-state">
         <div class="empty-icon">✅</div>
         <h3>All Clear</h3>
@@ -1143,47 +1157,66 @@ const Admin = {
       </div>
     `;
 
-    return users.map(u => `
-      <div class="request-card ${u.status === 'pending' ? 'pending' : 'approved'}" style="margin-bottom:14px;">
-        <div class="request-header">
-          <div style="display:flex;align-items:center;gap:12px;">
-            <div class="user-avatar avatar-${u.role}" style="width:42px;height:42px;font-size:16px;flex-shrink:0;">
-              ${u.name.charAt(0)}
+    return users.map(u => {
+      const apiId  = u._mongoId || u._id || u.id;
+      const localId = u.id;
+      const isPending = u.status === 'pending';
+      return `
+        <div class="request-card ${isPending ? 'pending' : 'approved'}" style="margin-bottom:16px;">
+          <div class="request-header">
+            <div style="display:flex;align-items:center;gap:14px;">
+              <div class="user-avatar avatar-${u.role}" style="width:50px;height:50px;font-size:20px;flex-shrink:0;">
+                ${u.name.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <h4 style="font-size:16px;font-weight:700;">${u.name}</h4>
+                <div style="font-size:12px;color:var(--muted);">${u.email}</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+                  📅 ${u.createdAt ? new Date(u.createdAt).toLocaleString() : 'Recently registered'}
+                </div>
+              </div>
             </div>
-            <div>
-              <h4 style="font-size:15px;">${u.name}</h4>
-              <div style="font-size:12px;color:var(--muted);">${u.email}</div>
+            <span class="badge badge-${isPending ? 'warning' : 'success'}" style="font-size:12px;padding:6px 12px;">
+              ${isPending ? '⏳ Pending Approval' : '✅ Approved'}
+            </span>
+          </div>
+
+          <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;">
+            <span class="badge badge-info">
+              ${u.role === 'teacher' ? '👨‍🏫 Teacher' : '🎓 Student'}
+            </span>
+            ${u.department ? `<span class="badge badge-primary">🏢 ${u.department}</span>` : ''}
+            ${u.designation ? `<span class="badge badge-info">🎖️ ${u.designation}</span>` : ''}
+            ${u.facultyType ? `<span class="badge badge-${u.facultyType === 'Permanent' ? 'success' : 'warning'}">${u.facultyType}</span>` : ''}
+            ${u.year     ? `<span class="badge badge-info">📅 ${u.year}</span>` : ''}
+            ${u.semester ? `<span class="badge badge-info">🗓️ ${u.semester}</span>` : ''}
+          </div>
+
+          ${u.subjects?.length ? `
+            <div style="margin-top:8px;font-size:12px;color:var(--muted);">
+              📚 Subjects: <strong>${u.subjects.join(', ')}</strong>
             </div>
-          </div>
-          <span class="badge badge-${u.status === 'pending' ? 'warning' : 'success'}">
-            ${u.status === 'pending' ? '⏳ Pending' : '✅ Approved'}
-          </span>
+          ` : ''}
+
+          ${isPending ? `
+            <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
+              <button class="btn btn-success" style="flex:1;min-width:160px;"
+                onclick="Admin.approveUser('${apiId}', '${localId}')">
+                ✅ Approve Account
+              </button>
+              <button class="btn btn-danger" style="flex:1;min-width:160px;"
+                onclick="Admin.rejectUser('${apiId}', '${localId}', '${u.name.replace(/'/g, "\\'")}')">
+                ❌ Reject & Delete
+              </button>
+            </div>
+          ` : `
+            <div style="margin-top:10px;">
+              <button class="btn btn-danger btn-sm" onclick="Admin.deleteUser('${localId}')">🗑 Remove</button>
+            </div>
+          `}
         </div>
-        <div class="request-meta" style="margin-top:10px;">
-          <span class="badge badge-info" style="margin-right:6px;">
-            ${u.role === 'teacher' ? '👨‍🏫' : '🎓'} ${u.role.charAt(0).toUpperCase() + u.role.slice(1)}
-          </span>
-          <span class="badge badge-primary" style="margin-right:6px;">🏢 ${u.department || '—'}</span>
-          ${u.year     ? `<span class="badge badge-info" style="margin-right:6px;">📅 ${u.year}</span>` : ''}
-          ${u.semester ? `<span class="badge badge-info">🗓️ ${u.semester}</span>` : ''}
-          ${u.subjects?.length ? `<div style="margin-top:6px;font-size:12px;color:var(--muted);">📚 ${u.subjects.join(', ')}</div>` : ''}
-        </div>
-        ${u.status === 'pending' ? `
-          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-            <button class="btn btn-success btn-sm" onclick="Admin.approveUser('${u.id}')">
-              ✅ Approve Account
-            </button>
-            <button class="btn btn-danger btn-sm" onclick="Admin.rejectUser('${u.id}')">
-              ❌ Reject & Delete
-            </button>
-          </div>
-        ` : `
-          <div style="margin-top:10px;">
-            <button class="btn btn-danger btn-sm" onclick="Admin.deleteUser('${u.id}')">🗑 Remove</button>
-          </div>
-        `}
-      </div>
-    `).join('');
+      `;
+    }).join('');
   },
 
   filterApprovals(status, btn) {
@@ -1191,44 +1224,54 @@ const Admin = {
     btn.classList.add('active');
     const users = status === 'pending'
       ? DB.getUsers().filter(u => u.status === 'pending')
-      : DB.getUsers().filter(u => u.status === 'approved' && u.role !== 'admin');
+      : DB.getUsers().filter(u => (u.status === 'approved' || u.status === 'active') && u.role !== 'admin');
     document.getElementById('approvals-list').innerHTML = this.renderApprovalsList(users);
   },
 
-  approveUser(id) {
-    const user = DB.getUserById(id);
-    if (!user) return;
-    DB.updateUser(id, { status: 'approved' });
+  approveUser(mongoId, localId) {
+    const user = DB.getUserById(localId) || DB.getUsers().find(u => u._mongoId === mongoId || u.email);
+    if (!user) { showToast('User not found.', 'error'); return; }
 
-    // Also approve via API if user has an API id
-    UsersAPI.approve(id).catch(() => {
-      // API not available — localStorage only
+    // Call backend API with MongoDB _id
+    UsersAPI.approve(mongoId).then(() => {
+      // Update localStorage
+      DB.updateUser(localId, { status: 'active' });
+      DB.addNotification({
+        type: 'info', targetUserId: localId,
+        title: 'Account Approved! 🎉',
+        message: `Your ${user.role} account has been approved. You can now sign in to RoutinePilot.`,
+        icon: '✅'
+      });
+      DB.addChangeLog({ action: 'Account Approved', details: `${user.name} (${user.role}) approved`, by: Auth.getUser().name });
+      showToast(`✅ ${user.name}'s account approved! They can now login.`, 'success');
+      this.navigate('approvals');
+    }).catch(err => {
+      console.error('[Approve] API error:', err?.message);
+      // Fallback: approve in localStorage only
+      DB.updateUser(localId, { status: 'active' });
+      DB.addNotification({
+        type: 'info', targetUserId: localId,
+        title: 'Account Approved!',
+        message: `Your ${user.role} account has been approved. You can now sign in.`,
+        icon: '✅'
+      });
+      showToast(`✅ ${user.name} approved (offline mode).`, 'success');
+      this.navigate('approvals');
     });
-
-    DB.addNotification({
-      type: 'info',
-      targetUserId: id,
-      title: 'Account Approved!',
-      message: `Your ${user.role} account has been approved. You can now sign in.`,
-      icon: '✅'
-    });
-    DB.addChangeLog({ action: 'Account Approved', details: `${user.name} (${user.role}) approved`, by: Auth.getUser().name });
-    showToast(`${user.name}'s account approved!`, 'success');
-    this.navigate('approvals');
   },
 
-  rejectUser(id) {
-    const user = DB.getUserById(id);
-    if (!confirm(`Reject and delete ${user?.name}'s registration?`)) return;
-    DB.deleteUser(id);
+  rejectUser(mongoId, localId, userName) {
+    if (!confirm(`Reject and permanently delete ${userName}'s registration?\n\nThis cannot be undone.`)) return;
 
-    // Also delete via API
-    UsersAPI.delete(id).catch(() => {
-      // API not available — localStorage only
+    // Delete from backend
+    UsersAPI.delete(mongoId).catch(err => {
+      console.warn('[Reject] API delete failed:', err?.message);
     });
 
-    DB.addChangeLog({ action: 'Account Rejected', details: `${user?.name} (${user?.role}) rejected`, by: Auth.getUser().name });
-    showToast(`Registration rejected and removed.`, 'warning');
+    // Delete from localStorage
+    DB.deleteUser(localId);
+    DB.addChangeLog({ action: 'Account Rejected', details: `${userName} rejected and deleted`, by: Auth.getUser().name });
+    showToast(`❌ ${userName}'s registration rejected and removed.`, 'warning');
     this.navigate('approvals');
   },
 
