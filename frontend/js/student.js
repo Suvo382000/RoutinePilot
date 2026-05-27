@@ -24,6 +24,17 @@ const Student = {
     if (unread > 0) {
       setTimeout(() => showToast(`You have ${unread} new notification${unread > 1 ? 's' : ''}!`, 'info'), 800);
     }
+
+    // Sync fresh data from MongoDB then re-render
+    if (typeof DataSync !== 'undefined') {
+      DataSync.syncAll().then(() => {
+        const body = document.getElementById('student-page-body');
+        if (body && this.currentSection === 'my-routine') {
+          body.innerHTML = this.renderMyRoutine();
+        }
+      }).catch(() => {});
+    }
+    }
   },
 
   renderSidebar(unread) {

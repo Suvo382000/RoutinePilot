@@ -19,6 +19,16 @@ const Teacher = {
       <div class="toast-container" id="toast-container"></div>
       <div class="notif-panel" id="notif-panel">${this.renderNotifPanel()}</div>
     `;
+
+    // Sync fresh data from MongoDB then re-render
+    if (typeof DataSync !== 'undefined') {
+      DataSync.syncAll().then(() => {
+        const body = document.getElementById('teacher-page-body');
+        if (body && this.currentSection === 'my-routine') {
+          body.innerHTML = this.renderMyRoutine();
+        }
+      }).catch(() => {});
+    }
   },
 
   renderSidebar(unread) {
@@ -107,12 +117,21 @@ const Teacher = {
 
   getMySlots() {
     const user = Auth.getUser();
+    // User might have different id formats: user.id, user._id, user._mongoId
+    const myIds = [user.id, user._id, user._mongoId].filter(Boolean).map(String);
+
     const mySlots = [];
     DB.getRoutines().forEach(routine => {
       routine.slots.forEach(slot => {
-        if (slot.teacherId === user.id || slot.substituteTeacherId === user.id) {
+        const slotTeacherId = String(slot.teacherId || '');
+        const slotSubId     = String(slot.substituteTeacherId || '');
+
+        const isMyClass      = myIds.includes(slotTeacherId);
+        const isMySubstitute = slotSubId && myIds.includes(slotSubId);
+
+        if (isMyClass || isMySubstitute) {
           mySlots.push({ ...slot, routineId: routine.id, routineName: routine.name,
-            isSubstitute: slot.substituteTeacherId === user.id });
+            isSubstitute: isMySubstitute && !isMyClass });
         }
       });
     });
@@ -361,11 +380,33 @@ const Teacher = {
     }
 
     const routine = DB.getRoutineById(routineId);
-    DB.addAbsentRequest({
+    const reqData = {
       teacherId: user.id,
-      routineId,
+      routineId: routine?._mongoId || routine?._id || routineId,
       routineName: routine?.name || '',
       date, subject, period, message
+    };
+
+    // Save to localStorage
+    DB.addAbsentRequest(reqData);
+
+    // Also save to MongoDB via API
+    AbsentAPI.create({
+      routineId: routine?._mongoId || routine?._id || routineId,
+      date, subject, period, message
+    }).then(apiReq => {
+      // Update localStorage with MongoDB _id
+      if (apiReq?._id) {
+        const reqs = DB.getAbsentRequests();
+        const local = reqs.find(r => r.date === date && r.subject === subject && r.period === period && r.teacherId === user.id);
+        if (local) {
+          local._mongoId = apiReq._id;
+          local._id = apiReq._id;
+          DB.saveAbsentRequests(reqs);
+        }
+      }
+    }).catch(err => {
+      console.warn('[submitAbsent] API create failed:', err?.message);
     });
 
     // Notify admin

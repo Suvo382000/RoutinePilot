@@ -208,7 +208,8 @@ const DataSync = {
         this.syncUsers(),
         this.syncRoutines(),
         this.syncNotifications(),
-        this.syncChangelog()
+        this.syncChangelog(),
+        this.syncAbsentRequests()
       ]);
       console.log('[DataSync] All data synced from MongoDB');
     } catch (e) {
@@ -270,6 +271,25 @@ const DataSync = {
           id: l._id || l.id
         }));
         localStorage.setItem('rms_changelog', JSON.stringify(mapped));
+      }
+    } catch (e) { /* silent */ }
+  },
+
+  async syncAbsentRequests() {
+    try {
+      const requests = await AbsentAPI.getAll();
+      if (Array.isArray(requests) && requests.length > 0) {
+        const mapped = requests.map(r => ({
+          ...r,
+          id: r._id || r.id,
+          _mongoId: r._id || r.id,
+          teacherId: r.teacherId?._id || r.teacherId?.id || r.teacherId,
+          teacherName: r.teacherId?.name || r.teacherName || '',
+          substituteTeacherId: r.substituteTeacherId?._id || r.substituteTeacherId?.id || r.substituteTeacherId || null,
+          substituteTeacherName: r.substituteTeacherId?.name || r.substituteTeacherName || '',
+          routineId: r.routineId?._id || r.routineId?.id || r.routineId
+        }));
+        localStorage.setItem('rms_absent', JSON.stringify(mapped));
       }
     } catch (e) { /* silent */ }
   }
