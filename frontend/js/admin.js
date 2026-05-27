@@ -1081,25 +1081,22 @@ const Admin = {
   renderApprovals() {
     const self = this;
 
-    // Check if we have a token first
-    const token = localStorage.getItem('rms_token');
-
-    if (!token) {
-      // No token — admin logged in via localStorage fallback
-      // Try to get token by re-authenticating
-      const adminUser = Auth.getUser();
-      if (adminUser) {
-        AuthAPI.login(adminUser.email, adminUser.password || '', 'admin').catch(() => {});
-      }
-    }
+    // Debug: log what we're about to do
+    const token = localStorage.getItem('rms_token') || sessionStorage.getItem('rms_token_backup');
+    console.log('[Approvals] Token present:', !!token);
+    console.log('[Approvals] API_BASE:', typeof API_BASE !== 'undefined' ? API_BASE : 'undefined');
 
     // Fetch fresh from API every time
     UsersAPI.getPending().then(apiPending => {
-      if (!Array.isArray(apiPending)) return;
+      console.log('[Approvals] API returned', apiPending?.length || 0, 'pending users');
+
+      if (!Array.isArray(apiPending)) {
+        console.warn('[Approvals] API response is not an array:', apiPending);
+        return;
+      }
 
       // Sync into localStorage preserving MongoDB _id
       const currentUsers = DB.getUsers();
-      let changed = false;
       apiPending.forEach(apiUser => {
         const mongoId = String(apiUser._id || apiUser.id || '');
         const exists = currentUsers.find(u =>
@@ -1107,59 +1104,46 @@ const Admin = {
         );
         if (!exists) {
           currentUsers.push({ ...apiUser, id: mongoId, _mongoId: mongoId, status: 'pending' });
-          changed = true;
         } else {
           exists._mongoId = mongoId;
-          if (exists.status !== 'pending') { exists.status = 'pending'; changed = true; }
+          exists.status = 'pending';
         }
       });
-      if (changed) DB.saveUsers(currentUsers);
+      DB.saveUsers(currentUsers);
 
+      // Render directly with API data + localStorage merged
       const listEl = document.getElementById('approvals-list');
-      if (!listEl) return;
+      if (!listEl) { console.warn('[Approvals] listEl not found'); return; }
+
       const merged = DB.getUsers().filter(u => u.status === 'pending');
       const mergedApproved = DB.getUsers().filter(u =>
         (u.status === 'approved' || u.status === 'active') && u.role !== 'admin'
       );
+      console.log('[Approvals] Rendering', merged.length, 'pending and', mergedApproved.length, 'approved');
+
       listEl.innerHTML = self.renderApprovalsList(merged);
       const tabs = document.querySelectorAll('.tab-btn');
       if (tabs[0]) tabs[0].textContent = `Pending (${merged.length})`;
       if (tabs[1]) tabs[1].textContent = `Approved (${mergedApproved.length})`;
     }).catch(err => {
-      console.warn('[Approvals] API error:', err?.status, err?.message);
+      console.error('[Approvals] API error:', err);
       const listEl = document.getElementById('approvals-list');
       if (!listEl) return;
 
-      if (err?.status === 401 || err?.status === 403) {
-        // Token expired — show re-login prompt
-        listEl.innerHTML = `
-          <div style="text-align:center;padding:40px 20px;">
-            <div style="font-size:32px;margin-bottom:12px;">🔐</div>
-            <h3 style="margin-bottom:8px;">Session Expired</h3>
-            <p style="color:var(--muted);font-size:13px;margin-bottom:20px;">
-              Your session has expired. Please log out and log back in to view pending approvals.
-            </p>
-            <button class="btn btn-primary" onclick="App.logout()">🚪 Logout & Re-login</button>
+      listEl.innerHTML = `
+        <div style="padding:24px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;">
+          <h3 style="color:#dc2626;margin-bottom:10px;">⚠️ Failed to load pending accounts</h3>
+          <div style="font-family:monospace;font-size:12px;color:#991b1b;background:#fff;padding:10px;border-radius:6px;margin-bottom:12px;">
+            <strong>Status:</strong> ${err?.status || 'No status'}<br/>
+            <strong>Message:</strong> ${err?.message || 'Unknown error'}<br/>
+            <strong>Token present:</strong> ${!!token}
           </div>
-        `;
-      } else {
-        // Other error — show localStorage data with retry
-        const local = DB.getUsers().filter(u => u.status === 'pending');
-        if (local.length > 0) {
-          listEl.innerHTML = self.renderApprovalsList(local);
-        } else {
-          listEl.innerHTML = `
-            <div style="text-align:center;padding:40px 20px;">
-              <div style="font-size:32px;margin-bottom:12px;">⚠️</div>
-              <h3 style="margin-bottom:8px;">Could not load from server</h3>
-              <p style="color:var(--muted);font-size:13px;margin-bottom:20px;">
-                Error: ${err?.message || 'Unknown error'}
-              </p>
-              <button class="btn btn-primary" onclick="Admin.navigate('approvals')">🔄 Retry</button>
-            </div>
-          `;
-        }
-      }
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-primary btn-sm" onclick="Admin.navigate('approvals')">🔄 Retry</button>
+            <button class="btn btn-warning btn-sm" onclick="App.logout()">🚪 Logout & Re-login</button>
+          </div>
+        </div>
+      `;
     });
 
     const localPending  = DB.getUsers().filter(u => u.status === 'pending');
