@@ -2112,7 +2112,16 @@ const Admin = {
     const user = Auth.getUser();
     if (newName === user.name) { showToast('Name is the same — nothing changed.', 'warning'); return; }
 
+    // Update localStorage
     DB.updateUser(user.id, { name: newName });
+
+    // Update MongoDB via API
+    const mongoId = user._mongoId || user._id || user.id;
+    UsersAPI.update(mongoId, { name: newName }).catch(err => {
+      console.warn('[saveProfileName] API update failed:', err?.message);
+    });
+    // Also call the profile update endpoint
+    AuthAPI.updateProfile(newName).catch(() => {});
 
     // Update session
     user.name = newName;
@@ -2148,6 +2157,11 @@ const Admin = {
     if (newPw === currentPw) { showToast('New password must be different from current.', 'warning'); return; }
 
     DB.updateUser(user.id, { password: newPw });
+
+    // Update MongoDB via API
+    AuthAPI.changePassword(currentPw, newPw).catch(err => {
+      console.warn('[saveProfilePassword] API change failed:', err?.message);
+    });
 
     // Update session
     user.password = newPw;
