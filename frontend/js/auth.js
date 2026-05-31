@@ -537,10 +537,8 @@ function handleSignup(e) {
   if (signupRole === 'admin') {
     const adminCode = document.getElementById('su-admin-code')?.value?.trim();
     if (!adminCode) { showSuError('Please enter the admin secure code.'); return; }
-    if (adminCode !== 'ADMIN2026') {
-      showSuError('Invalid admin secure code. Access denied.');
-      return;
-    }
+    // Code will be validated inside trySignup (async)
+    window._pendingAdminCode = adminCode;
   }
   if (signupRole === 'teacher') {
     const designation  = document.getElementById('su-designation')?.value;
@@ -584,6 +582,35 @@ function handleSignup(e) {
     // Try API first, fall back to localStorage
     const trySignup = async () => {
       let apiSucceeded = false;
+
+      // Validate admin code against server if admin signup
+      if (signupRole === 'admin' && window._pendingAdminCode) {
+        try {
+          const result = await SettingsAPI.verifyAdminCode(window._pendingAdminCode);
+          if (!result.valid) {
+            btn.disabled = false;
+            btnText.textContent = 'Create Account';
+            showSuError('Invalid admin secure code. Access denied.');
+            return;
+          }
+        } catch(e) {
+          // API returned error or is down
+          if (e.status === 401) {
+            btn.disabled = false;
+            btnText.textContent = 'Create Account';
+            showSuError(e.message || 'Invalid admin secure code. Access denied.');
+            return;
+          }
+          // API completely down — use hardcoded fallback
+          if (window._pendingAdminCode !== 'ADMIN2026') {
+            btn.disabled = false;
+            btnText.textContent = 'Create Account';
+            showSuError('Invalid admin secure code. Access denied.');
+            return;
+          }
+        }
+        delete window._pendingAdminCode;
+      }
 
       try {
         await AuthAPI.signup(userData);

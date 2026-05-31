@@ -194,6 +194,20 @@ const ChangelogAPI = {
   }
 };
 
+// ===== SETTINGS API =====
+const SettingsAPI = {
+  async verifyAdminCode(code) {
+    return await apiFetch('/settings/verify-admin-code', {
+      method: 'POST', body: JSON.stringify({ code })
+    });
+  },
+  async updateAdminCode(currentCode, newCode) {
+    return await apiFetch('/settings/admin-code', {
+      method: 'PUT', body: JSON.stringify({ currentCode, newCode })
+    });
+  }
+};
+
 // ===== CONSTANTS API =====
 const ConstantsAPI = {
   async get() { return await apiFetch('/constants').catch(() => null); }

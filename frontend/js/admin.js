@@ -2100,6 +2100,25 @@ const Admin = {
 
       </div>
 
+      <!-- Change Admin Secret Code -->
+      <div class="card" style="margin-top:24px;border-left:4px solid var(--warning);">
+        <div class="card-header"><h3>🔐 Admin Secret Code</h3></div>
+        <div class="card-body">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+            This code is required when someone registers as a new admin. Change it regularly to prevent unauthorized access.
+          </p>
+          <div class="form-group">
+            <label>New Admin Code (min 6 characters)</label>
+            <input type="text" id="profile-admin-code" placeholder="Enter new admin secret code" />
+          </div>
+          <div class="form-group">
+            <label>Your Current Password (to confirm)</label>
+            <input type="password" id="profile-code-password" placeholder="Enter your password to confirm" />
+          </div>
+          <button class="btn btn-warning" onclick="Admin.saveAdminCode()">🔐 Update Admin Code</button>
+        </div>
+      </div>
+
       <!-- Account Info -->
       <div class="card" style="margin-top:24px;">
         <div class="card-header"><h3>ℹ️ Account Information</h3></div>
@@ -2189,5 +2208,36 @@ const Admin = {
     DB.addChangeLog({ action: 'Password Changed', details: 'Admin password updated', by: user.name });
     showToast('Password changed successfully!', 'success');
     this.navigate('profile');
+  },
+
+  saveAdminCode() {
+    const newCode  = document.getElementById('profile-admin-code')?.value?.trim();
+    const password = document.getElementById('profile-code-password')?.value;
+
+    if (!newCode) { showToast('Please enter a new admin code.', 'error'); return; }
+    if (newCode.length < 6) { showToast('Admin code must be at least 6 characters.', 'error'); return; }
+    if (!password) { showToast('Please enter your password to confirm.', 'error'); return; }
+
+    // Verify admin's password first
+    const user = Auth.getUser();
+    const freshUser = DB.getUserById(user.id);
+    if (freshUser && freshUser.password !== password) {
+      showToast('Incorrect password. Cannot update admin code.', 'error');
+      return;
+    }
+
+    // Get current code (ask user to enter it for verification)
+    // Use the API to update
+    const currentCode = prompt('Enter the CURRENT admin secret code to confirm the change:');
+    if (!currentCode) { showToast('Cancelled.', 'warning'); return; }
+
+    SettingsAPI.updateAdminCode(currentCode, newCode).then(() => {
+      DB.addChangeLog({ action: 'Admin Code Changed', details: 'Admin secret code was updated', by: user.name });
+      showToast('🔐 Admin secret code updated successfully!', 'success');
+      document.getElementById('profile-admin-code').value = '';
+      document.getElementById('profile-code-password').value = '';
+    }).catch(err => {
+      showToast(err?.message || 'Failed to update admin code.', 'error');
+    });
   }
 };

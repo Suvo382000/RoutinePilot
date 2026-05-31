@@ -21,7 +21,8 @@ app.use('/api/absent-requests', require('./routes/absentRequests'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/departments', require('./routes/departments'));
 app.use('/api/changelog', require('./routes/changelog'));
-app.use('/api/changelog', require('./routes/changelog'));
+app.use('/api/settings', require('./routes/settings'));
+app.use('/api/settings', require('./routes/settings'));
 
 // Constants endpoint (public — for frontend dropdowns)
 const constants = require('./utils/constants');
