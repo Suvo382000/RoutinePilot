@@ -223,7 +223,8 @@ const DataSync = {
         this.syncRoutines(),
         this.syncNotifications(),
         this.syncChangelog(),
-        this.syncAbsentRequests()
+        this.syncAbsentRequests(),
+        this.syncDepartments()
       ]);
       console.log('[DataSync] All data synced from MongoDB');
     } catch (e) {
@@ -304,6 +305,17 @@ const DataSync = {
           routineId: r.routineId?._id || r.routineId?.id || r.routineId
         }));
         localStorage.setItem('rms_absent', JSON.stringify(mapped));
+      }
+    } catch (e) { /* silent */ }
+  },
+
+  async syncDepartments() {
+    try {
+      const depts = await DeptAPI.getAll();
+      if (Array.isArray(depts) && depts.length > 0) {
+        // Store both the full objects (with _id) and a plain name list for DB.getDepartments()
+        localStorage.setItem('rms_dept_objects', JSON.stringify(depts));
+        localStorage.setItem('rms_departments', JSON.stringify(depts.map(d => d.name)));
       }
     } catch (e) { /* silent */ }
   }

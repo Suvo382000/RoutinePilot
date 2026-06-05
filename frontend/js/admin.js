@@ -1340,7 +1340,40 @@ const Admin = {
   },
 
   renderDepartments() {
-    const depts = DB.getDepartments();
+    // Always fetch fresh department data from the backend before rendering
+    DeptAPI.getAll().then(depts => {
+      if (Array.isArray(depts) && depts.length > 0) {
+        localStorage.setItem('rms_dept_objects', JSON.stringify(depts));
+        localStorage.setItem('rms_departments', JSON.stringify(depts.map(d => d.name)));
+      }
+      const body = document.getElementById('admin-page-body');
+      if (body && this.currentSection === 'departments') {
+        body.innerHTML = this._renderDepartmentsHTML();
+      }
+    }).catch(() => {
+      // Fallback: render from localStorage if backend unreachable
+      const body = document.getElementById('admin-page-body');
+      if (body && this.currentSection === 'departments') {
+        body.innerHTML = this._renderDepartmentsHTML();
+      }
+    });
+
+    // Show a loading state immediately while we wait for the backend
+    return `<div style="text-align:center;padding:48px;color:var(--muted);">⏳ Loading departments…</div>`;
+  },
+
+  _getDeptObjects() {
+    // Returns full dept objects [{_id, name}, ...] from localStorage (populated by sync)
+    const stored = localStorage.getItem('rms_dept_objects');
+    if (stored) {
+      try { return JSON.parse(stored); } catch (e) {}
+    }
+    // Fallback: build from name list
+    return DB.getDepartments().map(name => ({ _id: null, name }));
+  },
+
+  _renderDepartmentsHTML() {
+    const depts    = this._getDeptObjects();
     const users    = DB.getUsers();
     const routines = DB.getRoutines();
 
@@ -1367,18 +1400,20 @@ const Admin = {
               ${depts.length === 0
                 ? `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px;">No departments found.</td></tr>`
                 : depts.map((dept, i) => {
-                    const teacherCount  = users.filter(u => u.role === 'teacher' && u.department === dept).length;
-                    const studentCount  = users.filter(u => u.role === 'student' && u.department === dept).length;
-                    const routineCount  = routines.filter(r => r.department === dept).length;
+                    const name = dept.name || dept;
+                    const id   = dept._id || null;
+                    const teacherCount  = users.filter(u => u.role === 'teacher' && u.department === name).length;
+                    const studentCount  = users.filter(u => u.role === 'student' && u.department === name).length;
+                    const routineCount  = routines.filter(r => r.department === name).length;
                     return `
                       <tr>
                         <td style="color:var(--muted);font-size:12px;">${i + 1}</td>
                         <td>
                           <div style="display:flex;align-items:center;gap:10px;">
                             <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;flex-shrink:0;">
-                              ${dept.charAt(0)}
+                              ${name.charAt(0)}
                             </div>
-                            <strong style="font-size:14px;">${dept}</strong>
+                            <strong style="font-size:14px;">${name}</strong>
                           </div>
                         </td>
                         <td><span class="badge badge-success">👨‍🏫 ${teacherCount}</span></td>
@@ -1386,8 +1421,8 @@ const Admin = {
                         <td><span class="badge badge-primary">📋 ${routineCount}</span></td>
                         <td>
                           <div style="display:flex;gap:8px;">
-                            <button class="btn btn-warning btn-sm" onclick="Admin.showRenameDeptModal('${dept}')">✏️ Rename</button>
-                            <button class="btn btn-danger btn-sm" onclick="Admin.deleteDept('${dept}', ${teacherCount + studentCount + routineCount})"
+                            <button class="btn btn-warning btn-sm" onclick="Admin.showRenameDeptModal('${id}', '${name.replace(/'/g, "\\'")}')">✏️ Rename</button>
+                            <button class="btn btn-danger btn-sm" onclick="Admin.deleteDept('${id}', '${name.replace(/'/g, "\\'")}', ${teacherCount + studentCount + routineCount})"
                               ${teacherCount + studentCount + routineCount > 0 ? 'title="Has linked records — will unlink them"' : ''}>
                               🗑 Delete
                             </button>
@@ -1434,15 +1469,24 @@ const Admin = {
   saveNewDept() {
     const name = document.getElementById('new-dept-name')?.value?.trim();
     if (!name) { showToast('Please enter a department name.', 'error'); return; }
-    const added = DB.addDepartment(name);
-    if (!added) { showToast(`"${name}" already exists.`, 'error'); return; }
-    DB.addChangeLog({ action: 'Dept Added', details: `Department "${name}" added`, by: Auth.getUser().name });
-    closeModal();
-    showToast(`Department "${name}" added!`, 'success');
-    this.navigate('departments');
+
+    DeptAPI.create(name).then(dept => {
+      // Update local cache
+      const objs = this._getDeptObjects();
+      objs.push(dept);
+      localStorage.setItem('rms_dept_objects', JSON.stringify(objs));
+      localStorage.setItem('rms_departments', JSON.stringify(objs.map(d => d.name)));
+
+      DB.addChangeLog({ action: 'Dept Added', details: `Department "${name}" added`, by: Auth.getUser().name });
+      closeModal();
+      showToast(`Department "${name}" added!`, 'success');
+      this.navigate('departments');
+    }).catch(err => {
+      showToast(err.message || `Failed to add department.`, 'error');
+    });
   },
 
-  showRenameDeptModal(oldName) {
+  showRenameDeptModal(deptId, oldName) {
     showModal(`
       <div class="modal-header">
         <h3>✏️ Rename Department</h3>
@@ -1463,7 +1507,7 @@ const Admin = {
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-warning" onclick="Admin.confirmRenameDept('${oldName}')">✏️ Rename</button>
+        <button class="btn btn-warning" onclick="Admin.confirmRenameDept('${deptId}', '${oldName.replace(/'/g, "\\'")}')">✏️ Rename</button>
       </div>
     `);
     setTimeout(() => {
@@ -1472,29 +1516,49 @@ const Admin = {
     }, 100);
   },
 
-  confirmRenameDept(oldName) {
+  confirmRenameDept(deptId, oldName) {
     const newName = document.getElementById('rename-dept-name')?.value?.trim();
-    if (!newName)           { showToast('Please enter a new name.', 'error'); return; }
-    if (newName === oldName){ showToast('Name is the same — nothing changed.', 'warning'); return; }
-    const existing = DB.getDepartments();
-    if (existing.includes(newName)) { showToast(`"${newName}" already exists.`, 'error'); return; }
+    if (!newName)            { showToast('Please enter a new name.', 'error'); return; }
+    if (newName === oldName) { showToast('Name is the same — nothing changed.', 'warning'); return; }
 
-    DB.renameDepartment(oldName, newName);
-    DB.addChangeLog({ action: 'Dept Renamed', details: `"${oldName}" → "${newName}"`, by: Auth.getUser().name });
-    closeModal();
-    showToast(`Renamed "${oldName}" to "${newName}". All records updated.`, 'success');
-    this.navigate('departments');
+    DeptAPI.rename(deptId, newName).then(() => {
+      // Update local cache
+      const objs = this._getDeptObjects().map(d =>
+        (d._id === deptId || d.name === oldName) ? { ...d, name: newName } : d
+      );
+      localStorage.setItem('rms_dept_objects', JSON.stringify(objs));
+      localStorage.setItem('rms_departments', JSON.stringify(objs.map(d => d.name)));
+
+      // Update local user/routine records too
+      DB.renameDepartment(oldName, newName);
+      DB.addChangeLog({ action: 'Dept Renamed', details: `"${oldName}" → "${newName}"`, by: Auth.getUser().name });
+      closeModal();
+      showToast(`Renamed "${oldName}" to "${newName}". All records updated.`, 'success');
+      this.navigate('departments');
+    }).catch(err => {
+      showToast(err.message || 'Failed to rename department.', 'error');
+    });
   },
 
-  deleteDept(name, linkedCount) {
+  deleteDept(deptId, name, linkedCount) {
     const msg = linkedCount > 0
       ? `Delete "${name}"?\n\n${linkedCount} record(s) are linked to this department. They will NOT be deleted but will no longer match a valid department.`
       : `Delete department "${name}"?`;
     if (!confirm(msg)) return;
-    DB.deleteDepartment(name);
-    DB.addChangeLog({ action: 'Dept Deleted', details: `Department "${name}" deleted`, by: Auth.getUser().name });
-    showToast(`Department "${name}" deleted.`, 'warning');
-    this.navigate('departments');
+
+    DeptAPI.delete(deptId).then(() => {
+      // Update local cache
+      const objs = this._getDeptObjects().filter(d => d._id !== deptId && d.name !== name);
+      localStorage.setItem('rms_dept_objects', JSON.stringify(objs));
+      localStorage.setItem('rms_departments', JSON.stringify(objs.map(d => d.name)));
+
+      DB.deleteDepartment(name);
+      DB.addChangeLog({ action: 'Dept Deleted', details: `Department "${name}" deleted`, by: Auth.getUser().name });
+      showToast(`Department "${name}" deleted.`, 'warning');
+      this.navigate('departments');
+    }).catch(err => {
+      showToast(err.message || 'Failed to delete department.', 'error');
+    });
   },
 
   renderTeachers() {
